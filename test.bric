@@ -1,0 +1,7 @@
+let x: Int = 100;
+fn y: Int () {
+    let t : Float = 200;
+    t = 100 + 400;
+}
+
+y();

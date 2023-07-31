@@ -1,0 +1,137 @@
+use crate::ast::block::Block;
+use crate::ast::expression::{Expr, BinaryOpcode, UnaryOpcode};
+use crate::ast::program::Program;
+use crate::ast::statement::Statement;
+use crate::ast::value::{Type, Value};
+use crate::ast::utils::append;
+
+use std::str::FromStr;
+
+grammar;
+
+Identifier: String = {
+    r"[a-zA-Z][a-zA-z_0-9]*" => <>.to_owned()
+};
+
+IntNum: i32 = {
+    r"-?[0-9]+" => i32::from_str(<>).unwrap()
+};
+
+FloatNum: f32 = {
+    r"-?[0-9]+\.[0-9]+" => f32::from_str(<>).unwrap()
+};
+
+StringLiteral: String = {
+    r#""[^"]*""# => <>[1..<>.len() - 1].to_owned()
+};
+
+BoolLiteral: bool = {
+    "true" => true,
+    "false" => false,
+};
+
+Term: Box<Expr> = {
+    IntNum => Box::new(Expr::Constant(Value::Int(<>))),
+    FloatNum => Box::new(Expr::Constant(Value::Float(<>))),
+    StringLiteral => Box::new(Expr::Constant(Value::String(<>))),
+    BoolLiteral => Box::new(Expr::Constant(Value::Bool(<>))),
+    Identifier => Box::new(Expr::Identifier(<>)),
+    "(" <Expr> ")"
+};
+
+pub Expr: Box<Expr> = {
+    Disjunction
+}
+
+Disjunction: Box<Expr> = {
+    Disjunction DisjOp Conjunction => Box::new(Expr::BinaryOp(<>)),
+    Conjunction,
+};
+
+DisjOp: BinaryOpcode = {
+    "||" => BinaryOpcode::Disj,
+}
+
+Conjunction: Box<Expr> = {
+    Conjunction ConjOp Comparison => Box::new(Expr::BinaryOp(<>)),
+    Comparison,
+};
+
+ConjOp: BinaryOpcode = {
+    "&&" => BinaryOpcode::Conj,
+}
+
+Comparison: Box<Expr> = {
+    Summ CompareOp Summ => Box::new(Expr::BinaryOp(<>)),
+    Summ,
+};
+
+CompareOp: BinaryOpcode = {
+    "==" => BinaryOpcode::Equals,
+    "!=" => BinaryOpcode::NotEquals,
+    "<" => BinaryOpcode::Lower,
+    ">" => BinaryOpcode::Greater,
+    "<=" => BinaryOpcode::LowerEquals,
+    ">=" => BinaryOpcode::GreaterEquals,
+}
+
+Type: Type = {
+    "Int" => Type::Int,
+    "String" => Type::String,
+    "Float" => Type::Float,
+    "Bool" => Type::Bool,
+}
+
+Summ: Box<Expr> = {
+    Summ SummOp Factor => Box::new(Expr::BinaryOp(<>)),
+    Factor,
+};
+
+SummOp: BinaryOpcode = {
+    "+" => BinaryOpcode::Add,
+    "-" => BinaryOpcode::Sub,
+};
+
+Factor: Box<Expr> = {
+    Factor FactorOp UnaryResult => Box::new(Expr::BinaryOp(<>)),
+    UnaryResult,
+};
+
+FactorOp: BinaryOpcode = {
+    "*" => BinaryOpcode::Mul,
+    "/" => BinaryOpcode::Div,
+};
+
+UnaryResult: Box<Expr> = {
+    UnaryOp Term => Box::new(Expr::UnaryOp(<>)),
+    Term,
+};
+
+UnaryOp: UnaryOpcode = {
+    "!" => UnaryOpcode::Not,
+}
+
+Statement: Statement = {
+    "let" <Identifier> ":" <Type> "=" <Expr> ";" => Statement::new_definition(<>),
+    "fn" <Identifier> ":" <Type> "(" ")" <Block> => Statement::new_function(<>),
+    <Identifier> "(" ")" ";" => Statement::new_function_call(<>),
+    <Identifier> "=" <Expr> ";" => Statement::new_assignment(<>),
+    Block => Statement::new_block(<>)
+};
+
+Statements: Vec<Statement> = {
+    Statement => vec![<>],
+    Statements Statement => append(<>),
+};
+
+Block: Block = {
+    "{" <Statements> "}" => Block::new_statements(<>),
+    "if" <Expr> "{" <Statements> "}" => Block::new_condition(<>, None),
+    "if" <exp:Expr> "{" <thn:Statements> "}" "else" "{" <els:Statements> "}" => Block::new_condition(exp, thn, Some(els)),
+    "loop" "{" <Statements> "}" => Block::new_loop(<>),
+    "while" <Expr> "{" <Statements> "}" => Block::new_while(<>),
+}
+
+pub Program: Program = {
+    <Statements> => Program::new(<>)
+}
