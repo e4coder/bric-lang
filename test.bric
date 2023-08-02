@@ -1,7 +1,47 @@
-let x: Int = 100;
-fn y: Int () {
+fn y () -> Int {
     let t : Float = 200;
     t = 100 + 400;
+    return;
 }
 
-y();
+fn y2 () {
+   let x : Float = 123; 
+   return x;
+}
+
+
+fn y3 (x: Int) -> Int {
+   let y : Float = 400; 
+}
+
+fn y4 ( x: Int, y: Float) -> Bool {
+    let p: Int = 100;
+    p = p + x;
+    p = p + y;
+    p = p + ( x * y);
+}
+
+fn FunctionInFunction () {
+    let x: Int = 20;
+    fn InsideFunction (x: Int) {
+        x = 300;
+        fn InsideInsideFunction () {
+            return y;
+        }
+        InsideInsideFunction ();
+        return x;
+    }
+
+    InsideFunction(x);
+    return x;
+}
+
+fn main () -> Int {
+    y();
+    y2();
+    y3(22);
+    y4(1,3);
+    FunctionInFunction();
+
+    return 0; 
+}

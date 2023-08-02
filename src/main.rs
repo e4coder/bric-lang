@@ -18,7 +18,7 @@ fn main() {
         .parse(&source)
         .expect("Unable to parse the program file");
 
-    for statement in program.statements {
+    for statement in program.items {
         println!("{:?}",statement)
     }
 

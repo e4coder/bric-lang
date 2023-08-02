@@ -4,6 +4,8 @@ pub mod program;
 pub mod statement;
 pub mod utils;
 pub mod value;
+pub mod functions;
+pub mod item;
 
 lalrpop_mod!(#[allow(clippy::all)] #[allow(dead_code)] pub bric_lang); // synthesized by LALRPOP
 

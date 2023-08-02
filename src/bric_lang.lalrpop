@@ -2,6 +2,8 @@ use crate::ast::block::Block;
 use crate::ast::expression::{Expr, BinaryOpcode, UnaryOpcode};
 use crate::ast::program::Program;
 use crate::ast::statement::Statement;
+use crate::ast::functions::{FunctionParam, FunctionBlock, FunctionArg};
+use crate::ast::item::Item;
 use crate::ast::value::{Type, Value};
 use crate::ast::utils::append;
 
@@ -112,11 +114,13 @@ UnaryOp: UnaryOpcode = {
 }
 
 Statement: Statement = {
-    "let" <Identifier> ":" <Type> "=" <Expr> ";" => Statement::new_definition(<>),
-    "fn" <Identifier> ":" <Type> "(" ")" <Block> => Statement::new_function(<>),
-    <Identifier> "(" ")" ";" => Statement::new_function_call(<>),
+    // "let" <Identifier> ":" <Type> "=" <Expr> ";" => Statement::new_definition(<>),
+    <VariableDeclarationStatement>,
+    <FunctionStatement>,
+    <FunctionCallStatement>,
     <Identifier> "=" <Expr> ";" => Statement::new_assignment(<>),
-    Block => Statement::new_block(<>)
+    Block => Statement::new_block(<>),
+    <FunctionReturnStatement>,
 };
 
 Statements: Vec<Statement> = {
@@ -132,6 +136,66 @@ Block: Block = {
     "while" <Expr> "{" <Statements> "}" => Block::new_while(<>),
 }
 
+FunctionBlock: FunctionBlock = {
+    "{" <Statements> "}" => FunctionBlock::new_function_block(<>),
+}
+
+FunctionParam: FunctionParam = {
+    <Identifier> ":" <Type> => FunctionParam::new_param(<>),
+}
+
+FunctionParams: Vec<FunctionParam> = {
+    FunctionParam => vec![<>],
+    <ps:FunctionParams> "," <p2:FunctionParam> => append(ps, p2),
+}
+
+FunctionArg: FunctionArg = {
+    <Identifier> => FunctionArg::new_arg(<>),
+}
+
+FunctionArgs: Vec<FunctionArg> = {
+    FunctionArg => vec![<>],
+    <ars:FunctionArgs> "," <ar2:FunctionArg> => append(ars, ar2),
+}
+
+FunctionItem: Item = {
+    "fn" <i:Identifier> "(" ")" <b:FunctionBlock> => Item::new_function(i, None, None, b),
+    "fn" <i:Identifier> "(" <p:FunctionParams> ")" <b:FunctionBlock> => Item::new_function(i,Some(p),None,b),
+    "fn" <i:Identifier> "(" <p:FunctionParams> ")" "->" <t:Type> <b:FunctionBlock> => Item::new_function(i,Some(p),Some(t),b),
+    "fn" <i:Identifier> "(" ")" "->" <t:Type> <b:FunctionBlock> => Item::new_function(i, None, Some(t), b),
+}
+
+FunctionStatement: Statement = {
+    "fn" <i:Identifier> "(" ")" <b:FunctionBlock> => Statement::new_function(i, None, None, b),
+    "fn" <i:Identifier> "(" <p:FunctionParams> ")" <b:FunctionBlock> => Statement::new_function(i,Some(p),None,b),
+    "fn" <i:Identifier> "(" <p:FunctionParams> ")" "->" <t:Type> <b:FunctionBlock> => Statement::new_function(i,Some(p),Some(t),b),
+    "fn" <i:Identifier> "(" ")" "->" <t:Type> <b:FunctionBlock> => Statement::new_function(i, None, Some(t), b),
+}
+
+FunctionCallStatement: Statement = {
+    <i:Identifier> "(" ")" ";" => Statement::new_function_call(i, None),
+    <i:Identifier> "(" <args:FunctionArgs> ")" ";" => Statement::new_function_call(i, Some(args)),
+}
+
+FunctionReturnStatement: Statement = {
+    "return" ";" => Statement::new_return_statement(None),
+    "return" <i:Expr> ";" => Statement::new_return_statement(Some(i)),
+}
+
+VariableDeclarationStatement: Statement = {
+    "let" <i:Identifier> ":" <t:Type> ";" => Statement::new_definition(i, t, None),
+    "let" <i:Identifier> ":" <t:Type> "=" <e:Expr> ";" => Statement::new_definition(i, t, Some(e)),
+}
+
+Item: Item = {
+    FunctionItem
+}
+
+Items: Vec<Item> = {
+    Item => vec![<>],
+    Items Item => append(<>)
+}
+
 pub Program: Program = {
-    <Statements> => Program::new(<>)
+    <Items> => Program::new(<>)
 }
