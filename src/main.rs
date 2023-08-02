@@ -36,7 +36,7 @@ fn main() {
         
         let puts = PutsFunctionDeclaration(context, module, builder);
 
-        MainFunctionDefinition(context, module, builder, puts.function_type, puts.function, gval);
+        MainFunctionDefinition(context, module, builder, puts.function_type, puts.function);
         
         llvm::core::LLVMPrintModuleToFile(module, b"bric_lang.ll\0".as_ptr() as *const _, std::ptr::null_mut());
 
@@ -55,7 +55,6 @@ unsafe fn MainFunctionDefinition (
     builder: *mut llvm::LLVMBuilder,
     puts_function_type: *mut llvm::LLVMType,
     puts_function: *mut llvm::LLVMValue,
-    gval: *mut llvm::LLVMValue,
 ) {
     let int_8_type = llvm::core::LLVMInt8TypeInContext(context);
     let int_8_type_ptr = llvm::core::LLVMPointerType(int_8_type, 0);
@@ -77,7 +76,7 @@ unsafe fn MainFunctionDefinition (
     );
 
     llvm::core::LLVMBuildCall2(builder, puts_function_type, puts_function, &mut puts_function_args, 1, b"i\0".as_ptr() as *const _);
-    ReassignGlobalVariableDeclaration(context, module, builder, gval);
+    ReassignGlobalVariableDeclaration(context, module, builder);
     llvm::core::LLVMBuildRet(builder, llvm::core::LLVMConstInt(int_32_type, 0, 0));
 
 }
@@ -135,10 +134,8 @@ unsafe fn ReassignGlobalVariableDeclaration (
     context: *mut llvm::LLVMContext,
     module: *mut llvm::LLVMModule,
     builder: *mut llvm::LLVMBuilder,
-    gval: *mut llvm::LLVMValue,
 ) {
     let int_32_type = llvm::core::LLVMInt32TypeInContext(context);
-
-    let newval = llvm::core::LLVMConstInt(int_32_type, 100, 0);
-    llvm::core::LLVMSetInitializer(gval, newval);
+    let gptr = llvm::core::LLVMGetNamedGlobal(m, b"global_var\0".as_ptr() as *const _);
+    llvm::core::LLVMStoreInst(builder, llvm::core::LLVMConstInt(int_32_type, 200, 0), gptr);
 }
