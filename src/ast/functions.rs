@@ -31,12 +31,12 @@ impl FunctionParam {
 #[derive(PartialEq, Debug)]
 pub enum FunctionArg {
     Arg {
-        identifier: String,
+        expression: Box<Expr>,
     }
 }
 
 impl FunctionArg {
-    pub fn new_arg(identifier: String) -> Self {
-        Self::Arg { identifier }
+    pub fn new_arg(expression: Box<Expr>) -> Self {
+        Self::Arg { expression }
     }
 }

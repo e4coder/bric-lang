@@ -150,7 +150,7 @@ FunctionParams: Vec<FunctionParam> = {
 }
 
 FunctionArg: FunctionArg = {
-    <Identifier> => FunctionArg::new_arg(<>),
+    <Expr> => FunctionArg::new_arg(<>),
 }
 
 FunctionArgs: Vec<FunctionArg> = {

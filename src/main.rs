@@ -1,59 +1,59 @@
 extern crate llvm_sys as llvm;
-// #[macro_use]
-// extern crate lalrpop_util;
+#[macro_use]
+extern crate lalrpop_util;
 
 use std::{fs, f32::consts, task::Context, ffi::CString};
 
-// mod ast;
+mod ast;
 
 fn main() {
     
-    // let source_result = fs::read_to_string("test.bric");
-    // let source = match source_result {
-    //    Ok(s) => s,
-    //    Err(_e) => r#"let x = "Could not load from test source";"#.to_string(), 
-    // };
+    let source_result = fs::read_to_string("test.bric");
+    let source = match source_result {
+       Ok(s) => s,
+       Err(_e) => r#"let x = "Could not load from test source";"#.to_string(), 
+    };
 
-    // let program = ast::bric_lang::ProgramParser::new()
-    //     .parse(&source)
-    //     .expect("Unable to parse the program file");
+    let program = ast::bric_lang::ProgramParser::new()
+        .parse(&source)
+        .expect("Unable to parse the program file");
 
-    // for statement in program.items {
-    //     println!("{:?}",statement)
-    // }
-
-    unsafe {
-        let context = llvm::core::LLVMContextCreate();
-        let module = llvm::core::LLVMModuleCreateWithName(b"example_module\0".as_ptr() as *const _);
-        let builder = llvm::core::LLVMCreateBuilderInContext(context);
-
-        let int_8_type = llvm::core::LLVMInt8TypeInContext(context);
-        let int_8_type_ptr = llvm::core::LLVMPointerType(int_8_type, 0);
-        let int_32_type = llvm::core::LLVMInt32TypeInContext(context);
-
-        let gval = GlobalVariableDeclaration(context, module, builder);
-        GlobalConstandDefinition(context, module, builder);
-        
-        let puts = PutsFunctionDeclaration(context, module, builder);
-        let printf = PrintfFunctionDeclaration(context, module, builder);
-
-        MainFunctionDefinition(
-            context,
-            module,
-            builder,
-            puts.function_type,
-            puts.function,
-            printf.function_type,
-            printf.function
-        );
-        
-        llvm::core::LLVMPrintModuleToFile(module, b"bric_lang.ll\0".as_ptr() as *const _, std::ptr::null_mut());
-
-        llvm::core::LLVMDisposeBuilder(builder);
-        llvm::core::LLVMDisposeModule(module);
-        llvm::core::LLVMContextDispose(context);
-
+    for statement in program.items {
+        println!("{:?}",statement)
     }
+
+    // unsafe {
+    //     let context = llvm::core::LLVMContextCreate();
+    //     let module = llvm::core::LLVMModuleCreateWithName(b"example_module\0".as_ptr() as *const _);
+    //     let builder = llvm::core::LLVMCreateBuilderInContext(context);
+
+    //     let int_8_type = llvm::core::LLVMInt8TypeInContext(context);
+    //     let int_8_type_ptr = llvm::core::LLVMPointerType(int_8_type, 0);
+    //     let int_32_type = llvm::core::LLVMInt32TypeInContext(context);
+
+    //     let gval = GlobalVariableDeclaration(context, module, builder);
+    //     GlobalConstandDefinition(context, module, builder);
+        
+    //     let puts = PutsFunctionDeclaration(context, module, builder);
+    //     let printf = PrintfFunctionDeclaration(context, module, builder);
+
+    //     MainFunctionDefinition(
+    //         context,
+    //         module,
+    //         builder,
+    //         puts.function_type,
+    //         puts.function,
+    //         printf.function_type,
+    //         printf.function
+    //     );
+        
+    //     llvm::core::LLVMPrintModuleToFile(module, b"bric_lang.ll\0".as_ptr() as *const _, std::ptr::null_mut());
+
+    //     llvm::core::LLVMDisposeBuilder(builder);
+    //     llvm::core::LLVMDisposeModule(module);
+    //     llvm::core::LLVMContextDispose(context);
+
+    // }
 
 }
 
@@ -87,17 +87,23 @@ unsafe fn MainFunctionDefinition (
     );
 
 
-    let format_string = CString::new("Hello, world %d!\n").unwrap();
-    let var = llvm::core::LLVMBuildAlloca(builder, int_32_type, CString::new("my_var2").unwrap().as_ptr()) ;
-    llvm::core::LLVMBuildStore(builder, llvm::core::LLVMConstInt(int_32_type, 100, 0), var);
-    let var_val = llvm::core::LLVMBuildLoad2(builder, int_32_type, var, b"tb\0".as_ptr() as *const _);
+    let format_string = CString::new("Hello, world %d %d!\n").unwrap();
+    // let var = llvm::core::LLVMBuildAlloca(builder, int_32_type, CString::new("my_var2").unwrap().as_ptr()) ;
+    // llvm::core::LLVMBuildStore(builder, llvm::core::LLVMConstInt(int_32_type, 100, 0), var);
+    // let var_val = llvm::core::LLVMBuildLoad2(builder, int_32_type, var, b"tb\0".as_ptr() as *const _);
+    let var = LocalVariableDeclaration(context, module, builder, 400);
+    let var_val = llvm::core::LLVMBuildLoad2(builder, int_32_type, var, CString::new("").unwrap().as_ptr());
+
+    let vals  = [123, 33, 45];
+
+    let avar = LocalArrayDeclarationAlloca(context, module, builder);
     let format_string_ptr = 
         llvm::core::LLVMBuildGlobalStringPtr(
             builder,
             format_string.as_ptr(),
             CString::new("").unwrap().as_ptr(),
         );
-    let mut args = [format_string_ptr, var_val];
+    let mut args = [format_string_ptr, var_val, avar];
     // llvm::core::LLVMBuildCall2(
     //     builder,
     //     printf_function,
@@ -174,6 +180,64 @@ unsafe fn GlobalVariableDeclaration (
     llvm::core::LLVMSetInitializer(gval, val);
 
     gval
+}
+
+unsafe fn LocalVariableDeclaration (
+    context: *mut llvm::LLVMContext,
+    module: *mut llvm::LLVMModule,
+    builder: *mut llvm::LLVMBuilder,
+    input: i32,
+) -> *mut llvm::LLVMValue {
+    let int_32_type = llvm::core::LLVMInt32TypeInContext(context);
+    // llvm::core::LLVMBuildArrayAlloca(builder, Ty, Val, Name)
+
+    let lptr = llvm::core::LLVMBuildAlloca(builder, int_32_type, CString::new("local").unwrap().as_ptr());
+    llvm::core::LLVMBuildStore(builder, llvm::core::LLVMConstInt(int_32_type, input.try_into().unwrap(), 0), lptr);
+    lptr
+}
+
+unsafe fn LocalArrayDeclarationAlloca (
+    context: *mut llvm::LLVMContext,
+    module: *mut llvm::LLVMModule,
+    builder: *mut llvm::LLVMBuilder,
+    // input: &mut Vec<u64>,
+) -> *mut llvm::LLVMValue {
+    let int_32_type = llvm::core::LLVMInt32Type();
+    // let val = llvm::core::LLVMConstArray(int_32_type, &mut input, input.len() as u32);
+    // let lptr = llvm::core::LLVMBuildArrayAlloca(builder, int_32_type, val, CString::new("allocaarray").unwrap().as_ptr());
+    let array_type = llvm::core::LLVMArrayType(int_32_type, 3 as u32);
+
+    let lptr = llvm::core::LLVMBuildAlloca(builder, array_type, CString::new("allocaArray").unwrap().as_ptr());
+    let mut vals = [
+            llvm::core::LLVMConstInt(int_32_type, 133, 0),
+            llvm::core::LLVMConstInt(int_32_type, 32, 0),
+            llvm::core::LLVMConstInt(int_32_type, 1000, 0)
+    ];
+
+    let mut re2 = &mut vals as *mut *mut llvm::LLVMValue;
+
+    llvm::core::LLVMBuildStore(
+    builder, llvm::core::LLVMConstArray(
+        int_32_type,
+        re2,
+        3 as u32
+    ),
+    lptr);
+
+    let mut indices = [
+        llvm::core::LLVMConstInt(int_32_type, 2, 0),
+        llvm::core::LLVMConstInt(int_32_type, 1, 0),
+        llvm::core::LLVMConstInt(int_32_type, 0, 0),
+    ];
+    let mut ind2 = &mut indices as *mut *mut llvm::LLVMValue;
+
+
+    let gep = llvm::core::LLVMConstGEP2(array_type, lptr, ind2, 1 as u32);
+    let gep2 = llvm::core::LLVMBuildGEP2(builder, int_32_type, lptr, ind2, 1, CString::new("elem").unwrap().as_ptr());
+
+    let index0 = llvm::core::LLVMBuildLoad2(builder, int_32_type, gep2, CString::new("").unwrap().as_ptr());
+
+    index0 
 }
 
 unsafe fn GlobalConstandDefinition (
