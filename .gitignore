@@ -6,3 +6,7 @@ test2.ll
 a.out
 old_main.rs
 bric_lang.ll
+bric_lang.o
+bric_lang.s
+bric_lang2
+bric_lang
